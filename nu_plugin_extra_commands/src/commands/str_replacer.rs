@@ -1,7 +1,9 @@
 use std::vec;
 
-use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand, SimplePluginCommand};
-use nu_protocol::{LabeledError, Signature, SyntaxShape, Type, Value};
+use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
+use nu_protocol::{
+    ast::RangeInclusion, record, IntRange, LabeledError, Signature, SyntaxShape, Type, Value,
+};
 use regex::{Captures, Regex};
 
 use crate::ExtraCommandsPlugin;
@@ -20,12 +22,12 @@ impl SimplePluginCommand for StrReplacer {
     }
 
     fn signature(&self) -> Signature {
-        let match_result = SyntaxShape::Record(vec![(
-            "captures".to_string(),
-            SyntaxShape::List(Box::new(SyntaxShape::String)),
-        )]);
-        Signature::build(PluginCommand::name(self))
-            .input_output_type(Type::String, Type::Int)
+        let match_result = SyntaxShape::List(Box::new(SyntaxShape::Record(vec![
+            ("range".to_string(), SyntaxShape::Range),
+            ("text".to_string(), SyntaxShape::String),
+        ])));
+        Signature::build(self.name())
+            .input_output_type(Type::String, Type::String)
             .required("regex", SyntaxShape::String, "the regex pattern to match")
             .required(
                 "replacer",
@@ -63,27 +65,35 @@ impl SimplePluginCommand for StrReplacer {
         })?;
 
         let replacer = call.req(1)?;
-        let engine = engine.clone();
 
-        let result = replace_all(&re, input, |captures: &regex::Captures| {
-            let captures = captures
+        let result = replace_all(&re, input, |caps: &regex::Captures| {
+            let caps = caps
                 .iter()
                 .filter_map(|capture| {
-                    if let Some(capture) = capture {
-                        Some(Value::String {
-                            val: capture.as_str().to_string(),
-                            internal_span: span,
-                        })
+                    if let Some(cap) = capture {
+                        Some(Value::record(
+                            record!(
+                                "range" => Value::range(
+                                    IntRange::new(
+                                        Value::int(cap.start() as i64, span),
+                                        Value::int(cap.start() as i64 + 1, span),
+                                        Value::int(cap.end() as i64, span),
+                                        RangeInclusion::Inclusive,
+                                        span,
+                                    ).unwrap().into(),
+                                    span,
+                                ),
+                                "text" => Value::string(cap.as_str(), span),
+                            ),
+                            span,
+                        ))
                     } else {
                         None
                     }
                 })
-                .collect::<Vec<Value>>();
+                .collect::<Vec<_>>();
 
-            let match_result = Value::List {
-                vals: captures,
-                internal_span: span,
-            };
+            let match_result = Value::list(caps, span);
 
             let result =
                 engine.eval_closure(&replacer, vec![match_result.clone()], Some(match_result));
@@ -101,10 +111,7 @@ impl SimplePluginCommand for StrReplacer {
         });
 
         match result {
-            Ok(result) => Ok(Value::String {
-                val: result,
-                internal_span: span,
-            }),
+            Ok(result) => Ok(Value::string(result, span)),
             Err(e) => Err(e),
         }
     }
