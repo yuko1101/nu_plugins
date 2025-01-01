@@ -1,5 +1,5 @@
 [package]
-name = "nu_plugin_extra_commands"
+name = "nu_plugin_extras"
 version = "0.1.0"
 edition = "2021"
 

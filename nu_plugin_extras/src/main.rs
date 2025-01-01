@@ -3,9 +3,9 @@ mod commands;
 use commands::{str_match, str_replacer};
 use nu_plugin::{serve_plugin, MsgPackSerializer, Plugin, PluginCommand};
 
-pub struct ExtraCommandsPlugin;
+pub struct ExtrasPlugin;
 
-impl Plugin for ExtraCommandsPlugin {
+impl Plugin for ExtrasPlugin {
     fn version(&self) -> String {
         env!("CARGO_PKG_VERSION").into()
     }
@@ -19,5 +19,5 @@ impl Plugin for ExtraCommandsPlugin {
 }
 
 fn main() {
-    serve_plugin(&ExtraCommandsPlugin, MsgPackSerializer);
+    serve_plugin(&ExtrasPlugin, MsgPackSerializer);
 }

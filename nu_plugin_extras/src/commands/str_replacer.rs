@@ -6,12 +6,12 @@ use nu_protocol::{
 };
 use regex::{Captures, Regex};
 
-use crate::ExtraCommandsPlugin;
+use crate::ExtrasPlugin;
 
 pub struct StrReplacer;
 
 impl SimplePluginCommand for StrReplacer {
-    type Plugin = ExtraCommandsPlugin;
+    type Plugin = ExtrasPlugin;
 
     fn name(&self) -> &str {
         "str replacer"

@@ -3,14 +3,14 @@ use nu_protocol::{
     ast::RangeInclusion, record, IntRange, LabeledError, Signature, SyntaxShape, Type, Value,
 };
 
-use crate::ExtraCommandsPlugin;
+use crate::ExtrasPlugin;
 
 use super::str_replacer::match_result_type;
 
 pub struct StrMatch;
 
 impl SimplePluginCommand for StrMatch {
-    type Plugin = ExtraCommandsPlugin;
+    type Plugin = ExtrasPlugin;
 
     fn name(&self) -> &str {
         "str match"
