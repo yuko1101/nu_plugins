@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::{str_match, str_replacer};
+use commands::{clip, str_match, str_replacer};
 use nu_plugin::{serve_plugin, MsgPackSerializer, Plugin, PluginCommand};
 
 pub struct ExtrasPlugin;
@@ -12,6 +12,8 @@ impl Plugin for ExtrasPlugin {
 
     fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
         vec![
+            Box::new(clip::Clip),
+            Box::new(clip::ClipGet),
             Box::new(str_replacer::StrReplacer),
             Box::new(str_match::StrMatch),
         ]
