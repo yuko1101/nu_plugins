@@ -22,16 +22,12 @@ impl SimplePluginCommand for StrReplacer {
     }
 
     fn signature(&self) -> Signature {
-        let match_result = SyntaxShape::List(Box::new(SyntaxShape::Record(vec![
-            ("range".to_string(), SyntaxShape::Range),
-            ("text".to_string(), SyntaxShape::String),
-        ])));
         Signature::build(self.name())
             .input_output_type(Type::String, Type::String)
             .required("regex", SyntaxShape::String, "the regex pattern to match")
             .required(
                 "replacer",
-                SyntaxShape::Closure(Some(vec![match_result])),
+                SyntaxShape::Closure(Some(vec![match_result_type().to_shape()])),
                 "the closure to use for replacement",
             )
     }
@@ -43,7 +39,7 @@ impl SimplePluginCommand for StrReplacer {
         call: &EvaluatedCall,
         input: &Value,
     ) -> Result<Value, LabeledError> {
-        let span = input.span();
+        let input_span = input.span();
         let input = match input {
             Value::String { val, .. } => val,
             _ => {
@@ -75,17 +71,17 @@ impl SimplePluginCommand for StrReplacer {
                             record!(
                                 "range" => Value::range(
                                     IntRange::new(
-                                        Value::int(cap.start() as i64, span),
-                                        Value::int(cap.start() as i64 + 1, span),
-                                        Value::int(cap.end() as i64, span),
-                                        RangeInclusion::Inclusive,
-                                        span,
+                                        Value::int(cap.start() as i64, input_span),
+                                        Value::int(cap.start() as i64 + 1, input_span),
+                                        Value::int(cap.end() as i64, input_span),
+                                        RangeInclusion::RightExclusive,
+                                        input_span,
                                     ).unwrap().into(),
-                                    span,
+                                    input_span,
                                 ),
-                                "text" => Value::string(cap.as_str(), span),
+                                "text" => Value::string(cap.as_str(), input_span),
                             ),
-                            span,
+                            input_span,
                         ))
                     } else {
                         None
@@ -93,7 +89,7 @@ impl SimplePluginCommand for StrReplacer {
                 })
                 .collect::<Vec<_>>();
 
-            let match_result = Value::list(caps, span);
+            let match_result = Value::list(caps, input_span);
 
             let result =
                 engine.eval_closure(&replacer, vec![match_result.clone()], Some(match_result));
@@ -111,7 +107,7 @@ impl SimplePluginCommand for StrReplacer {
         });
 
         match result {
-            Ok(result) => Ok(Value::string(result, span)),
+            Ok(result) => Ok(Value::string(result, input_span)),
             Err(e) => Err(e),
         }
     }
@@ -133,4 +129,11 @@ fn replace_all<E>(
     }
     new.push_str(&haystack[last_match..]);
     Ok(new)
+}
+
+pub fn match_result_type() -> Type {
+    Type::list(Type::Record(Box::new([
+        ("range".into(), Type::Range),
+        ("text".into(), Type::String),
+    ])))
 }

@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::str_replacer;
+use commands::{str_match, str_replacer};
 use nu_plugin::{serve_plugin, MsgPackSerializer, Plugin, PluginCommand};
 
 pub struct ExtraCommandsPlugin;
@@ -11,7 +11,10 @@ impl Plugin for ExtraCommandsPlugin {
     }
 
     fn commands(&self) -> Vec<Box<dyn PluginCommand<Plugin = Self>>> {
-        vec![Box::new(str_replacer::StrReplacer)]
+        vec![
+            Box::new(str_replacer::StrReplacer),
+            Box::new(str_match::StrMatch),
+        ]
     }
 }
 
