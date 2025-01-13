@@ -57,30 +57,35 @@ impl SimplePluginCommand for FromHtml {
     }
 }
 
-fn html_to_record(element: ElementRef, span: Span) -> Value {
+fn html_to_record(element_ref: ElementRef, span: Span) -> Value {
     let mut record = record!();
-    let attributes = element.value().attrs();
+    let element = element_ref.value();
 
     let mut attrs_record = record!();
-    for (key, value) in attributes {
+    for (key, value) in element.attrs() {
         attrs_record.insert(key, Value::string(value, span));
     }
     record.insert("attrs", Value::record(attrs_record, span));
 
-    let children = element.children();
+    let children = element_ref.children();
     let mut children_list = vec![];
-    for child in children {
-        match child.value() {
+    for node_ref in children {
+        match node_ref.value() {
             Node::Element(_) => {
-                children_list.push(html_to_record(ElementRef::wrap(child).unwrap(), span));
+                children_list.push(html_to_record(ElementRef::wrap(node_ref).unwrap(), span));
             }
             Node::Text(text) => {
+                if text.trim().is_empty() {
+                    continue;
+                }
                 children_list.push(Value::string(text.to_string(), span));
             }
             _ => {}
         }
     }
     record.insert("children", Value::list(children_list, span));
+
+    record.insert("tag", Value::string(element.name().to_string(), span));
 
     Value::record(record, span)
 }
