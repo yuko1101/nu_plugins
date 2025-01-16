@@ -1,12 +1,12 @@
 use std::vec;
 
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
-use nu_protocol::{
-    ast::RangeInclusion, record, IntRange, LabeledError, Signature, SyntaxShape, Type, Value,
-};
+use nu_protocol::{LabeledError, Signature, SyntaxShape, Type, Value};
 use regex::{Captures, Regex};
 
 use crate::ExtrasPlugin;
+
+use super::str_match::{get_match_result, match_result_type};
 
 pub struct StrReplacer;
 
@@ -63,33 +63,7 @@ impl SimplePluginCommand for StrReplacer {
         let replacer = call.req(1)?;
 
         let result = replace_all(&re, input, |caps: &regex::Captures| {
-            let caps = caps
-                .iter()
-                .filter_map(|capture| {
-                    if let Some(cap) = capture {
-                        Some(Value::record(
-                            record!(
-                                "range" => Value::range(
-                                    IntRange::new(
-                                        Value::int(cap.start() as i64, input_span),
-                                        Value::int(cap.start() as i64 + 1, input_span),
-                                        Value::int(cap.end() as i64, input_span),
-                                        RangeInclusion::RightExclusive,
-                                        input_span,
-                                    ).unwrap().into(),
-                                    input_span,
-                                ),
-                                "text" => Value::string(cap.as_str(), input_span),
-                            ),
-                            input_span,
-                        ))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let match_result = Value::list(caps, input_span);
+            let match_result = get_match_result(&re, caps, input_span);
 
             let result =
                 engine.eval_closure(&replacer, vec![match_result.clone()], Some(match_result));
@@ -129,11 +103,4 @@ fn replace_all<E>(
     }
     new.push_str(&haystack[last_match..]);
     Ok(new)
-}
-
-pub fn match_result_type() -> Type {
-    Type::list(Type::Record(Box::new([
-        ("range".into(), Type::Range),
-        ("text".into(), Type::String),
-    ])))
 }

@@ -1,12 +1,10 @@
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
 use nu_protocol::{
-    ast::RangeInclusion, record, IntRange, LabeledError, Signature, SyntaxShape, Type, Value,
+    ast::RangeInclusion, record, IntRange, LabeledError, Signature, Span, SyntaxShape, Type, Value,
 };
+use regex::{Captures, Match, Regex};
 
 use crate::ExtrasPlugin;
-
-use super::str_replacer::match_result_type;
-
 pub struct StrMatch;
 
 impl SimplePluginCommand for StrMatch {
@@ -54,32 +52,57 @@ impl SimplePluginCommand for StrMatch {
             )
         })?;
 
-        let mut result = vec![];
-        for caps in re.captures_iter(input) {
-            let mut captures = vec![];
-            for cap in caps.iter() {
-                if let Some(cap) = cap {
-                    captures.push(Value::record(
-                        record!(
-                            "range" => Value::range(
-                                IntRange::new(
-                                    Value::int(cap.start() as i64, input_span),
-                                    Value::int(cap.start() as i64 + 1, input_span),
-                                    Value::int(cap.end() as i64, input_span),
-                                    RangeInclusion::RightExclusive,
-                                    input_span
-                                ).unwrap().into(),
-                                input_span
-                            ),
-                            "text" => Value::string(cap.as_str(), input_span),
-                        ),
-                        input_span,
-                    ));
-                }
-            }
-            result.push(Value::list(captures, input_span));
-        }
+        let results: Vec<Value> = re
+            .captures_iter(input)
+            .map(|caps| get_match_result(&re, &caps, input_span))
+            .collect();
 
-        Ok(Value::list(result, input_span))
+        Ok(Value::list(results, input_span))
     }
+}
+
+pub fn get_match_result(re: &Regex, caps: &Captures, span: Span) -> Value {
+    let capture_names = re
+        .capture_names()
+        .enumerate()
+        .map(|(i, name)| name.map(String::from).unwrap_or_else(|| i.to_string()))
+        .collect::<Vec<_>>();
+
+    let mut captures = vec![];
+
+    for (cap_index, cap) in caps.iter().enumerate() {
+        if let Some(cap) = cap {
+            captures.push(get_match_result_cap(&capture_names[cap_index], cap, span));
+        }
+    }
+
+    Value::list(captures, span)
+}
+
+fn get_match_result_cap(name: impl Into<String>, cap: Match, span: Span) -> Value {
+    Value::record(
+        record!(
+            "name" => Value::string(name, span),
+            "text" => Value::string(cap.as_str(), span),
+            "range" => Value::range(
+                IntRange::new(
+                    Value::int(cap.start() as i64, span),
+                    Value::int(cap.start() as i64 + 1, span),
+                    Value::int(cap.end() as i64, span),
+                    RangeInclusion::RightExclusive,
+                    span
+                ).unwrap().into(),
+                span
+            ),
+        ),
+        span,
+    )
+}
+
+pub fn match_result_type() -> Type {
+    Type::list(Type::Record(Box::new([
+        ("name".into(), Type::String),
+        ("text".into(), Type::String),
+        ("range".into(), Type::Range),
+    ])))
 }
