@@ -1,8 +1,8 @@
+use fancy_regex::{Captures, Match, Regex};
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
 use nu_protocol::{
     ast::RangeInclusion, record, IntRange, LabeledError, Signature, Span, SyntaxShape, Type, Value,
 };
-use regex::{Captures, Match, Regex};
 
 use crate::ExtrasPlugin;
 pub struct StrMatch;
@@ -45,7 +45,7 @@ impl SimplePluginCommand for StrMatch {
         };
 
         let regex_string: String = call.req(0)?;
-        let re = regex::Regex::new(&regex_string).map_err(|e| {
+        let re = fancy_regex::Regex::new(&regex_string).map_err(|e| {
             LabeledError::new("Invalid regex pattern").with_label(
                 format!("Error: {}", e),
                 call.positional.get(0).unwrap().span(),
@@ -54,7 +54,7 @@ impl SimplePluginCommand for StrMatch {
 
         let results: Vec<Value> = re
             .captures_iter(input)
-            .map(|caps| get_match_result(&re, &caps, input_span))
+            .map(|caps| get_match_result(&re, &caps.unwrap(), input_span))
             .collect();
 
         Ok(Value::list(results, input_span))

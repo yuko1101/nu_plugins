@@ -1,8 +1,8 @@
 use std::vec;
 
+use fancy_regex::{Captures, Regex};
 use nu_plugin::{EngineInterface, EvaluatedCall, SimplePluginCommand};
 use nu_protocol::{LabeledError, Signature, SyntaxShape, Type, Value};
-use regex::{Captures, Regex};
 
 use crate::ExtrasPlugin;
 
@@ -53,7 +53,7 @@ impl SimplePluginCommand for StrReplacer {
         };
 
         let regex_string: String = call.req(0)?;
-        let re = regex::Regex::new(&regex_string).map_err(|e| {
+        let re = fancy_regex::Regex::new(&regex_string).map_err(|e| {
             LabeledError::new("Invalid regex pattern").with_label(
                 format!("Error: {}", e),
                 call.positional.get(0).unwrap().span(),
@@ -62,7 +62,7 @@ impl SimplePluginCommand for StrReplacer {
 
         let replacer = call.req(1)?;
 
-        let result = replace_all(&re, input, |caps: &regex::Captures| {
+        let result = replace_all(&re, input, |caps: &fancy_regex::Captures| {
             let match_result = get_match_result(&re, caps, input_span);
 
             let result =
@@ -96,6 +96,7 @@ fn replace_all<E>(
     let mut new = String::with_capacity(haystack.len());
     let mut last_match = 0;
     for caps in re.captures_iter(haystack) {
+        let caps = caps.unwrap();
         let m = caps.get(0).unwrap();
         new.push_str(&haystack[last_match..m.start()]);
         new.push_str(&replacement(&caps)?);

@@ -1004,9 +1004,9 @@ name = "nu_plugin_extras"
 version = "0.1.0"
 dependencies = [
  "arboard",
+ "fancy-regex",
  "nu-plugin",
  "nu-protocol",
- "regex",
 ]
 
 [[package]]
