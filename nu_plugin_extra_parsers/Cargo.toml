@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nu-plugin = "0.101.0"
-nu-protocol = "0.101.0"
+nu-plugin = "0.104.0"
+nu-protocol = "0.104.0"
 scraper = "0.22.0"
