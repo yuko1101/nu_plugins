@@ -39,6 +39,10 @@
             cargoLock = {
               lockFile = "${src}/Cargo.lock";
             };
+
+            meta = {
+              mainProgram = pname;
+            };
           };
       in
       {
